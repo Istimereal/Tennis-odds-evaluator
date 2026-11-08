@@ -31,8 +31,18 @@ builder.Services.AddScoped<PlayerService>();
 builder.Services.AddScoped<MatchService>();
 builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<ImportHistoryService>();
+builder.Services.AddScoped<DashboardService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:5174", "http://127.0.0.1:5174")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 var app = builder.Build();
 
+app.UseCors();
 app.MapControllers();
 app.Run();

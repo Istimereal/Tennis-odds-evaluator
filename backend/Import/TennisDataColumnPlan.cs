@@ -62,7 +62,10 @@ public static class TennisDataBinding
         new("TournamentEdition.Surface", "The season CSV column name for surface is not published."),
         new("TournamentEdition.Level", "Main Tour and Challenger are described as coverage, not as a published column name."),
         new("TournamentEdition.StartDate", "The season CSV column name for the tournament date is not published."),
-        new("Match.PlayedOn", "The season CSV column name for the match date is not published."),
+        new("Match.PlayedOn", "The season CSV column name for the match date is not published. The filename year is not used as the match date."),
+        new("Match.Score", "The season CSV column name for the score is not published."),
+        new("Match.Round", "The season CSV column name for the round is not published."),
+        new("TournamentEdition.Participants", "The season CSV column name for the draw or participant count is not published."),
         new("MatchPlayer.Ranking", "rank is documented on the player-performance CSV, not as a season-match column name."),
         new("MatchPlayer.Odds", "Match-winner odds and first-set odds are documented as present, but their column names are not published.")
     ];
@@ -76,6 +79,24 @@ public static class TennisDataBinding
             return [];
         }
 
-        return JsonSerializer.Deserialize<string[]>(json) ?? [];
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return document.RootElement
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString() ?? "")
+                .Where(name => name.Length > 0)
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 }

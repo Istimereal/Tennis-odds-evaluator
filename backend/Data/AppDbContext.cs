@@ -43,6 +43,9 @@ public class AppDbContext : DbContext
                 .HasForeignKey(edition => edition.TournamentId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(edition => new { edition.TournamentId, edition.Year }).IsUnique();
+            entity.HasIndex(edition => edition.Year);
+            entity.HasIndex(edition => edition.Surface);
+            entity.HasIndex(edition => edition.Level);
         });
 
         modelBuilder.Entity<Match>(entity =>

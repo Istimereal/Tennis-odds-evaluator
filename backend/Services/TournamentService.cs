@@ -53,4 +53,42 @@ public class TournamentService
             .ToListAsync(cancellationToken);
         return new PageResponse<TournamentResponse>(items, page, pageSize, total);
     }
+
+    public async Task<TournamentDetailResponse?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var tournament = await _db.Tournaments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (tournament is null)
+        {
+            return null;
+        }
+
+        var editionRows = await _db.TournamentEditions
+            .AsNoTracking()
+            .Where(edition => edition.TournamentId == id)
+            .OrderByDescending(edition => edition.Year)
+            .Select(edition => new
+            {
+                edition.Id,
+                edition.Year,
+                edition.Name,
+                edition.Surface,
+                edition.Level,
+                edition.StartDate,
+                MatchCount = edition.Matches.Count()
+            })
+            .ToListAsync(cancellationToken);
+        var editions = editionRows
+            .Select(edition => new TournamentEditionResponse(
+                edition.Id,
+                edition.Year,
+                edition.Name,
+                edition.Surface,
+                edition.Level,
+                edition.StartDate,
+                edition.MatchCount))
+            .ToArray();
+        return new TournamentDetailResponse(tournament.Id, tournament.SourceId, tournament.Name, editions);
+    }
 }

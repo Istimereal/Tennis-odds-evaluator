@@ -32,4 +32,11 @@ public class TournamentsController : ControllerBase
 
         return Ok(await _tournaments.GetPageAsync(page, pageSize, surface, level, year, cancellationToken));
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var tournament = await _tournaments.GetAsync(id, cancellationToken);
+        return tournament is null ? NotFound("Tournament was not found.") : Ok(tournament);
+    }
 }

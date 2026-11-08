@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+TestResults/
+.dotnet/
+tennis-frontend/node_modules/
+tennis-frontend/dist/

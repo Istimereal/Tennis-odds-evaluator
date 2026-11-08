@@ -299,6 +299,12 @@ namespace Tennis.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Level");
+
+                    b.HasIndex("Surface");
+
+                    b.HasIndex("Year");
+
                     b.HasIndex("TournamentId", "Year")
                         .IsUnique();
 

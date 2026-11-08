@@ -54,7 +54,8 @@ public class ImportHistoryService
                     file.MissingStatisticCells,
                     TennisDataBinding.ReadColumns(file.UnmappedColumns),
                     file.Error,
-                    file.ImportedAt))
+                    file.ImportedAt,
+                    TennisDataBinding.ReadColumns(file.HeaderJson)))
                 .ToArray())).ToArray();
         return new PageResponse<ImportBatchResponse>(items, page, pageSize, total);
     }

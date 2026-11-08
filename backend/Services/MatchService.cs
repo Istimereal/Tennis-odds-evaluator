@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tennis.Api.Data;
 using Tennis.Api.Data.Entities;
@@ -135,6 +136,39 @@ public class MatchService
                     row.Statistics,
                     row.Odds))
                 .ToArray(),
-            includeRaw ? match.RawRecord : null);
+            includeRaw ? match.RawRecord : null,
+            null,
+            null,
+            StatCompleteness(match));
+    }
+
+    private static double? StatCompleteness(Match match)
+    {
+        var cells = 0;
+        var filled = 0;
+        foreach (var row in match.Players)
+        {
+            if (string.IsNullOrWhiteSpace(row.Statistics))
+            {
+                continue;
+            }
+
+            using var document = JsonDocument.Parse(row.Statistics);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                cells++;
+                if (property.Value.ValueKind != JsonValueKind.Null)
+                {
+                    filled++;
+                }
+            }
+        }
+
+        return cells == 0 ? null : (double)filled / cells;
     }
 }
