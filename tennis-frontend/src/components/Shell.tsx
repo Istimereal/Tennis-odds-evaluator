@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 const links = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/players", label: "Players", end: false },
+  { to: "/compare", label: "Player Comparison", end: false },
   { to: "/matches", label: "Matches", end: false },
   { to: "/tournaments", label: "Tournaments", end: false },
   { to: "/imports", label: "Data Imports", end: false },
@@ -14,6 +15,7 @@ const later = ["Pre-Match Evaluator", "Live Evaluator", "Odds Analysis", "Statis
 const titles: Record<string, string> = {
   "/": "Dashboard",
   "/players": "Players",
+  "/compare": "Player Comparison",
   "/matches": "Matches",
   "/tournaments": "Tournaments",
   "/imports": "Data Imports",

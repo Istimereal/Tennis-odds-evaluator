@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Tennis.Api.Data;
 using Tennis.Api.Import;
+using Tennis.Api.Odds;
 using Tennis.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +33,12 @@ builder.Services.AddScoped<MatchService>();
 builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<ImportHistoryService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<HeadToHeadCalculationService>();
+builder.Services.AddScoped<IPlayerDirectory, EfPlayerDirectory>();
+builder.Services.AddScoped<IHeadToHeadMatchReader, EfHeadToHeadMatchReader>();
+builder.Services.AddScoped<IOddsMethod, HeadToHeadOddsMethod>();
+builder.Services.AddScoped<OddsGeneratorService>();
+builder.Services.AddScoped<PlayerComparisonService>();
 
 builder.Services.AddCors(options =>
 {

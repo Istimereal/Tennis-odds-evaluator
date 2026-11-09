@@ -196,3 +196,76 @@ export type Coverage = {
   seasons: SeasonCoverage[];
   blockedMappings: { field: string; reason: string }[];
 };
+
+export type OddsMethodEstimate = {
+  method: string;
+  status: string;
+  message: string;
+  headToHeadMatchCount: number;
+  playerAProbability: number | null;
+  playerBProbability: number | null;
+  playerADecimalOdds: number | null;
+  playerBDecimalOdds: number | null;
+};
+
+export type OddsGeneratorResult = {
+  playerAId: string;
+  playerAName: string | null;
+  playerBId: string;
+  playerBName: string | null;
+  playerAProbability: number | null;
+  playerBProbability: number | null;
+  playerADecimalOdds: number | null;
+  playerBDecimalOdds: number | null;
+  method: string;
+  headToHeadMatchCount: number;
+  status: string;
+  message: string;
+  matchContext: {
+    tournament: string | null;
+    startsAt: string | null;
+    round: string | null;
+    surface: string | null;
+    venue: string | null;
+  } | null;
+  methods: OddsMethodEstimate[];
+  combined: OddsMethodEstimate | null;
+};
+
+export type ComparisonPlayer = {
+  id: string;
+  name: string;
+  sourceId: string | null;
+  nationality: string | null;
+  matchCount: number;
+  wins: number;
+  losses: number;
+};
+
+export type HeadToHeadMeeting = {
+  matchId: string;
+  sourceKey: string;
+  date: string | null;
+  tournament: string | null;
+  surface: string | null;
+  round: string | null;
+  winnerId: string | null;
+  winnerName: string | null;
+  score: string | null;
+  venue: string | null;
+  time: string | null;
+};
+
+export type PlayerComparison = {
+  status: string;
+  message: string;
+  playerA: ComparisonPlayer | null;
+  playerB: ComparisonPlayer | null;
+  totalMatches: number;
+  playerAWins: number;
+  playerBWins: number;
+  playerAWinPercentage: number | null;
+  playerBWinPercentage: number | null;
+  meetings: HeadToHeadMeeting[];
+  odds: OddsGeneratorResult;
+};
