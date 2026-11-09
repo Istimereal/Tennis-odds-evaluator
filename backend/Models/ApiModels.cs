@@ -24,6 +24,42 @@ public record TournamentResponse(
     string? Level,
     DateOnly? StartDate);
 
+public record PlayerStatisticsResponse(
+    int? Aces,
+    int? DoubleFaults,
+    decimal? ServicePointsWonPercent,
+    decimal? ReturnPointsWonPercent,
+    decimal? BreakPointsWonPercent,
+    decimal? BreakPointsSavedPercent,
+    decimal? FirstServePercent,
+    decimal? FirstServePointsWonPercent,
+    decimal? SecondServePointsWonPercent,
+    int? BreakPointsFaced,
+    int? BreakPointsSaved,
+    int? BreakPointChances,
+    int? BreakPointsConverted,
+    int? Winners,
+    int? UnforcedErrors,
+    int? NetPointsWon,
+    int? TotalPointsWon);
+
+public record MatchSetResponse(
+    int SetNumber,
+    int? HomeGames,
+    int? AwayGames,
+    int? HomeTiebreak,
+    int? AwayTiebreak);
+
+public record MatchConditionsResponse(
+    int? DurationMinutes,
+    DateTimeOffset? ActualStart,
+    DateTimeOffset? CompletedAt,
+    string? Roof,
+    string? Venue,
+    string? Interruptions);
+
+public record PointByPointResponse(bool Available, string State, string Message);
+
 public record MatchPlayerResponse(
     Guid? PlayerId,
     string? SourceId,
@@ -32,7 +68,9 @@ public record MatchPlayerResponse(
     bool? IsWinner,
     int? Ranking,
     string Statistics,
-    string Odds);
+    string Odds,
+    int? RankingPoints,
+    PlayerStatisticsResponse? PlayerStatistics);
 
 public record MatchResponse(
     Guid Id,
@@ -48,7 +86,12 @@ public record MatchResponse(
     string? RawRecord,
     string? Round,
     string? Score,
-    double? StatCompleteness);
+    double? StatCompleteness,
+    string? Status,
+    string? StatusExtra,
+    IReadOnlyList<MatchSetResponse>? Sets,
+    MatchConditionsResponse? Conditions,
+    PointByPointResponse? PointByPoint);
 
 public record YearImportCount(
     int Year,

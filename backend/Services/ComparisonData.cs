@@ -47,6 +47,7 @@ public sealed class EfHeadToHeadMatchReader : IHeadToHeadMatchReader
 
     public async Task<IReadOnlyList<SourceMatch>> LoadPairAsync(Guid playerAId, Guid playerBId, CancellationToken cancellationToken)
     {
+        // Completed meetings only. MatchPlayerStatistics stay out of this query so a match's own numbers are not a pre-match odds input.
         var matches = await _db.Matches
             .AsNoTracking()
             .Include(match => match.Players)

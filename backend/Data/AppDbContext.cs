@@ -15,6 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<TournamentEdition> TournamentEditions => Set<TournamentEdition>();
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
+    public DbSet<MatchPlayerStatistics> MatchPlayerStatistics => Set<MatchPlayerStatistics>();
+    public DbSet<MatchSet> MatchSets => Set<MatchSet>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<ImportFileRecord> ImportFiles => Set<ImportFileRecord>();
 
@@ -80,6 +82,34 @@ public class AppDbContext : DbContext
             entity.HasOne(row => row.Player)
                 .WithMany(player => player.MatchPlayers)
                 .HasForeignKey(row => row.PlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MatchPlayerStatistics>(entity =>
+        {
+            entity.HasKey(stats => stats.Id);
+            entity.HasIndex(stats => stats.MatchPlayerId).IsUnique();
+            entity.Property(stats => stats.ServicePointsWonPercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.ReturnPointsWonPercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.BreakPointsWonPercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.BreakPointsSavedPercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.FirstServePercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.FirstServePointsWonPercent).HasPrecision(7, 3);
+            entity.Property(stats => stats.SecondServePointsWonPercent).HasPrecision(7, 3);
+            entity.HasOne(stats => stats.MatchPlayer)
+                .WithOne(row => row.PlayerStatistics)
+                .HasForeignKey<MatchPlayerStatistics>(stats => stats.MatchPlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MatchSet>(entity =>
+        {
+            entity.HasKey(set => set.Id);
+            entity.HasIndex(set => new { set.MatchId, set.SetNumber }).IsUnique();
+            entity.ToTable(table => table.HasCheckConstraint("CK_MatchSets_SetNumber", "\"SetNumber\" BETWEEN 1 AND 5"));
+            entity.HasOne(set => set.Match)
+                .WithMany(match => match.Sets)
+                .HasForeignKey(set => set.MatchId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

@@ -59,6 +59,7 @@ export function MatchesPage() {
               <table>
                 <thead>
                   <tr>
+                    <th>Match</th>
                     <th>Players</th>
                     <th>Winner</th>
                     <th>Tournament</th>
@@ -72,6 +73,9 @@ export function MatchesPage() {
                 <tbody>
                   {query.data.items.map((match) => (
                     <tr key={match.id}>
+                      <td>
+                        <Link to={`/matches/${match.id}`}>Details</Link>
+                      </td>
                       <td>
                         <PlayersCell players={match.players} />
                       </td>

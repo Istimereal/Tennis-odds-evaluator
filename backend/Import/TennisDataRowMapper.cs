@@ -10,7 +10,8 @@ public sealed record MappedPlayerSide(
     string? Name,
     int? Ranking,
     string OddsJson,
-    string StatisticsJson);
+    string StatisticsJson,
+    ParsedPlayerStatistics Parsed);
 
 public sealed record MappedSeasonRow(
     bool IsValid,
@@ -28,6 +29,7 @@ public sealed record MappedSeasonRow(
     int? SeasonYear,
     MappedPlayerSide Home,
     MappedPlayerSide Away,
+    IReadOnlyList<ParsedSetScore> Sets,
     int MissingStatisticCells);
 
 public static class TennisDataRowMapper
@@ -63,16 +65,17 @@ public static class TennisDataRowMapper
             ? parsedYear
             : null;
         var score = ScoreFromCells(row, plan);
+        var sets = TennisMatchStatistics.ParseSets(header, row);
 
         if (plan.WinnerCodeIndex < 0)
         {
-            return Invalid(rawJson, sourceKey, legacySourceKey, matchId, playedOn, tournamentName, surface, round, score, tourLevel, seasonYear, home, away, missing);
+            return Invalid(rawJson, sourceKey, legacySourceKey, matchId, playedOn, tournamentName, surface, round, score, tourLevel, seasonYear, home, away, sets, missing);
         }
 
         var winnerText = plan.WinnerCodeIndex < row.Length ? row[plan.WinnerCodeIndex].Trim() : "";
         if (!short.TryParse(winnerText, NumberStyles.None, CultureInfo.InvariantCulture, out var winnerCode) || winnerCode is not (1 or 2))
         {
-            return Invalid(rawJson, sourceKey, legacySourceKey, matchId, playedOn, tournamentName, surface, round, score, tourLevel, seasonYear, home, away, missing);
+            return Invalid(rawJson, sourceKey, legacySourceKey, matchId, playedOn, tournamentName, surface, round, score, tourLevel, seasonYear, home, away, sets, missing);
         }
 
         return new MappedSeasonRow(
@@ -91,10 +94,13 @@ public static class TennisDataRowMapper
             seasonYear,
             home,
             away,
+            sets,
             missing);
     }
 
     public static string? ReadRound(string? rawJson) => ReadString(rawJson, "round");
+
+    public static string? ReadRawText(string? rawJson, string name) => ReadString(rawJson, name);
 
     public static string? ReadScore(string? rawJson)
     {
@@ -195,6 +201,7 @@ public static class TennisDataRowMapper
         int? seasonYear,
         MappedPlayerSide home,
         MappedPlayerSide away,
+        IReadOnlyList<ParsedSetScore> sets,
         int missing)
     {
         return new MappedSeasonRow(
@@ -213,6 +220,7 @@ public static class TennisDataRowMapper
             seasonYear,
             home,
             away,
+            sets,
             missing);
     }
 
@@ -253,7 +261,13 @@ public static class TennisDataRowMapper
             odds[column[(side.Length + "_odds_".Length)..]] = raw;
         }
 
-        return new MappedPlayerSide(sourceId, name ?? sourceId, ranking, odds.ToJsonString(), statistics.ToJsonString());
+        return new MappedPlayerSide(
+            sourceId,
+            name ?? sourceId,
+            ranking,
+            odds.ToJsonString(),
+            statistics.ToJsonString(),
+            TennisMatchStatistics.ParseSide(header, row, side));
     }
 
     private static DateOnly? PlayedOn(string[] row, SeasonHeaderPlan plan)

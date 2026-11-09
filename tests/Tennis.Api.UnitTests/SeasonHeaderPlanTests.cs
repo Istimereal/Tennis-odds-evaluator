@@ -20,6 +20,8 @@ public class SeasonHeaderPlanTests
     {
         Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "TournamentEdition.StartDate");
         Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "TournamentEdition.Participants");
+        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "MatchPlayer.RankingPoints");
+        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "Match.Conditions");
         Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "Player.Name");
         Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "MatchPlayer.Odds");
         Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "Match.WinnerCode");

@@ -92,6 +92,7 @@ export function PlayerDetailPage() {
                           <th>Surface</th>
                           <th>Score</th>
                           <th>Result</th>
+                          <th>Match</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -112,6 +113,9 @@ export function PlayerDetailPage() {
                             <td>{unavailable(match.surface)}</td>
                             <td>{unavailable(match.score)}</td>
                             <td>{resultLabel(match.isWinner)}</td>
+                            <td>
+                              <Link to={`/matches/${match.id}`}>Details</Link>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

@@ -14,4 +14,5 @@ public class Match
     public Guid ImportFileId { get; set; }
     public ImportFileRecord ImportFile { get; set; } = null!;
     public List<MatchPlayer> Players { get; set; } = new();
+    public List<MatchSet> Sets { get; set; } = new();
 }

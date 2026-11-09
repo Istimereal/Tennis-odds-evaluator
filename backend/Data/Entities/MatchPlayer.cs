@@ -12,4 +12,5 @@ public class MatchPlayer
     public int? Ranking { get; set; }
     public string Statistics { get; set; } = "{}";
     public string Odds { get; set; } = "{}";
+    public MatchPlayerStatistics? PlayerStatistics { get; set; }
 }
