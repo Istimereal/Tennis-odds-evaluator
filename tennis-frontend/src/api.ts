@@ -1,4 +1,4 @@
-import type { Coverage, Dashboard, ImportBatch, ImportSummary, MatchRow, Page, Player, PlayerComparison, PlayerDetail, PlayerMatchHistory, TournamentDetail, TournamentRow } from "./types";
+import type { Coverage, Dashboard, ImportBatch, ImportSummary, MatchRow, Page, Player, PlayerComparison, PlayerDetail, PlayerMatchHistory, PlayerPerformance, TournamentDetail, TournamentRow } from "./types";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5080").replace(/\/$/, "");
 
@@ -38,6 +38,43 @@ export function playerQuery(id: string) {
 export function playerMatchesQuery(id: string, page: number) {
   const params = new URLSearchParams({ page: String(page), pageSize: "10" });
   return apiGet<Page<PlayerMatchHistory>>(`/api/players/${id}/matches?${params}`);
+}
+
+export type PlayerStatisticsFilters = {
+  asOfDate: string;
+  from: string;
+  to: string;
+  surfaces: string[];
+  level: string;
+  rankingGroup: string;
+  recent: string;
+};
+
+export function playerStatisticsQuery(id: string, filters: PlayerStatisticsFilters) {
+  const params = new URLSearchParams();
+  if (filters.asOfDate) {
+    params.set("asOfDate", filters.asOfDate);
+  }
+  if (filters.from) {
+    params.set("from", filters.from);
+  }
+  if (filters.to) {
+    params.set("to", filters.to);
+  }
+  for (const surface of filters.surfaces) {
+    params.append("surface", surface);
+  }
+  if (filters.level) {
+    params.set("level", filters.level);
+  }
+  if (filters.rankingGroup) {
+    params.set("rankingGroup", filters.rankingGroup);
+  }
+  if (filters.recent) {
+    params.set("recent", filters.recent);
+  }
+  const query = params.toString();
+  return apiGet<PlayerPerformance>(`/api/players/${id}/statistics${query ? `?${query}` : ""}`);
 }
 
 export function playerComparisonQuery(playerAId: string, playerBId: string) {
