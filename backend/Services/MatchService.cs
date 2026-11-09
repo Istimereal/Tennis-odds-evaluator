@@ -30,8 +30,11 @@ public class MatchService
     {
         var query = Filtered(playerId, tournamentId, surface, level, year, from, to);
         var total = await query.CountAsync(cancellationToken);
+        // HasValue first keeps undated matches after dated ones. DESC alone sorts null PlayedOn first on PostgreSQL.
         var ids = await query
-            .OrderByDescending(match => match.SourceYear)
+            .OrderByDescending(match => match.PlayedOn.HasValue)
+            .ThenByDescending(match => match.PlayedOn)
+            .ThenByDescending(match => match.SourceYear)
             .ThenBy(match => match.SourceKey)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

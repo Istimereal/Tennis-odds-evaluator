@@ -2,21 +2,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { matchesQuery } from "../api";
+import { PlayerSelect } from "../components/PlayerSelect";
 import { EmptyNote, Pager, QueryState, dash } from "../components/QueryState";
+import type { MatchPlayer, Player } from "../types";
 
-const fields = [
-  ["year", "Year"],
-  ["from", "From"],
-  ["to", "To"],
-  ["playerId", "Player id"],
-  ["tournamentId", "Tournament id"],
-  ["surface", "Surface"],
-  ["level", "Level"],
-] as const;
+const emptyDraft = {
+  year: "",
+  from: "",
+  to: "",
+  tournamentId: "",
+  surface: "",
+  level: "",
+};
 
 export function MatchesPage() {
   const [page, setPage] = useState(1);
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [draft, setDraft] = useState(emptyDraft);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const query = useQuery({ queryKey: ["matches", page, filters], queryFn: () => matchesQuery(filters, page) });
 
@@ -27,18 +29,25 @@ export function MatchesPage() {
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
-          setFilters(draft);
+          const next: Record<string, string> = { ...draft };
+          if (player) {
+            next.playerId = player.id;
+          }
+          setFilters(next);
         }}
       >
-        {fields.map(([key, label]) => (
-          <input
-            key={key}
-            aria-label={label}
-            placeholder={label}
-            value={draft[key] ?? ""}
-            onChange={(event) => setDraft({ ...draft, [key]: event.target.value })}
-          />
-        ))}
+        <PlayerSelect label="Player name" selected={player} onSelect={setPlayer} />
+        <input aria-label="Year" placeholder="Year" value={draft.year} onChange={(event) => setDraft({ ...draft, year: event.target.value })} />
+        <input aria-label="From" type="date" value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
+        <input aria-label="To" type="date" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+        <input
+          aria-label="Tournament id"
+          placeholder="Tournament id"
+          value={draft.tournamentId}
+          onChange={(event) => setDraft({ ...draft, tournamentId: event.target.value })}
+        />
+        <input aria-label="Surface" placeholder="Surface" value={draft.surface} onChange={(event) => setDraft({ ...draft, surface: event.target.value })} />
+        <input aria-label="Level" placeholder="Level" value={draft.level} onChange={(event) => setDraft({ ...draft, level: event.target.value })} />
         <button type="submit">Filter</button>
       </form>
       <QueryState isPending={query.isPending} error={query.error}>
@@ -64,14 +73,16 @@ export function MatchesPage() {
                   {query.data.items.map((match) => (
                     <tr key={match.id}>
                       <td>
-                        <Link to={`/matches/${match.id}`}>{playerLabel(match.players)}</Link>
+                        <PlayersCell players={match.players} />
                       </td>
                       <td>{winnerLabel(match.winnerCode, match.players)}</td>
                       <td>{dash(match.tournamentName)}</td>
                       <td>{dash(match.round)}</td>
                       <td>{dash(match.surface)}</td>
                       <td>{dash(match.score)}</td>
-                      <td>{dash(match.playedOn)}</td>
+                      <td>
+                        <Link to={`/matches/${match.id}`}>{dash(match.playedOn)}</Link>
+                      </td>
                       <td>{match.statCompleteness === null ? "—" : `${Math.round(match.statCompleteness * 100)}%`}</td>
                     </tr>
                   ))}
@@ -86,15 +97,27 @@ export function MatchesPage() {
   );
 }
 
-function playerLabel(players: { side: string; name: string | null }[]) {
+function PlayersCell({ players }: { players: MatchPlayer[] }) {
   if (players.length === 0) {
-    return "Sides not stored";
+    return <>Sides not stored</>;
   }
-  return players.map((player) => player.name ?? player.side).join(" vs ");
+  return (
+    <>
+      {players.map((player, index) => (
+        <span key={`${player.side}-${player.playerId ?? index}`}>
+          {index > 0 ? " vs " : null}
+          {player.playerId ? <Link to={`/players/${player.playerId}`}>{player.name ?? "Unavailable"}</Link> : (player.name ?? "Unavailable")}
+        </span>
+      ))}
+    </>
+  );
 }
 
-function winnerLabel(code: number | null, players: { side: string; name: string | null; isWinner: boolean | null }[]) {
+function winnerLabel(code: number | null, players: MatchPlayer[]) {
   const winner = players.find((player) => player.isWinner);
+  if (winner?.playerId && winner.name) {
+    return <Link to={`/players/${winner.playerId}`}>{winner.name}</Link>;
+  }
   if (winner?.name) {
     return winner.name;
   }

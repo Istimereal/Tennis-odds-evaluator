@@ -169,6 +169,118 @@ select {
   margin-bottom: 6px;
 }
 
+.search-results button {
+  background: transparent;
+  border: 0;
+  padding: 4px 2px;
+  text-align: left;
+}
+
+.player-select {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 240px;
+}
+
+.player-select input {
+  min-width: 200px;
+}
+
+.picker-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  min-width: 260px;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 8px;
+  background: #151c2c;
+  border: 1px solid #2a3548;
+  border-radius: 6px;
+}
+
+.picker-status {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.text-button {
+  background: transparent;
+  border-color: #2a3548;
+}
+
+.detail-head,
+.compare-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compare-actions {
+  margin-top: 12px;
+  justify-content: flex-start;
+}
+
+.detail-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.id-copy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.id-copy input {
+  width: min(100%, 340px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+a.button-link {
+  display: inline-block;
+  background: #1a6b62;
+  border: 1px solid #2f9e8f;
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: #e7edf5;
+}
+
+a.button-link:hover {
+  text-decoration: none;
+}
+
+.notice {
+  background: #17283a;
+  border: 1px solid #3d6f9a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #d6e8f8;
+}
+
+.notice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.warning {
+  color: #e6c98a;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
