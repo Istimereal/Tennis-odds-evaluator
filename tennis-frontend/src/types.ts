@@ -54,6 +54,61 @@ export type PlayerDetail = Player & {
   recentMatches: RecentMatch[];
 };
 
+export type ResultsSummary = {
+  matches: number;
+  wins: number;
+  losses: number;
+  winPercentage: number | null;
+};
+
+export type StatLine = {
+  key: string;
+  label: string;
+  kind: string;
+  value: number | null;
+  basis: string;
+  sampleSize: number;
+  total: number | null;
+  perMatch: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  note: string | null;
+};
+
+export type PlayerPerformance = {
+  overall: ResultsSummary;
+  surfaces: { surface: string; results: ResultsSummary }[];
+  levels: { level: string; results: ResultsSummary }[];
+  rankingGroups: { group: string; results: ResultsSummary }[];
+  opponentRanking: { average: number | null; sampleSize: number; missing: number };
+  recentForm: { key: string; label: string; seasonYear: number | null; results: ResultsSummary }[];
+  statistics: StatLine[];
+  coverage: {
+    matches: number;
+    missingOpponentRanking: number;
+    missingOrOtherSurface: number;
+    missingAces: number;
+    missingDoubleFaults: number;
+    missingServicePointsWon: number;
+    missingReturnPointsWon: number;
+    missingBreakPointsWon: number;
+    missingBreakPointsSaved: number;
+    undecidedResults: number;
+    excludedMatches: number;
+  };
+  filters: {
+    asOfDate: string | null;
+    surfaces: string[];
+    level: string | null;
+    from: string | null;
+    to: string | null;
+    rankingGroup: string | null;
+    recentMatchCount: number | null;
+    excludeMatchId: string | null;
+    seasonYear: number | null;
+  };
+};
+
 export type PlayerStatistics = {
   aces: number | null;
   doubleFaults: number | null;

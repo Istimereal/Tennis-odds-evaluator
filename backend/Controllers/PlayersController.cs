@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Tennis.Api.Models;
 using Tennis.Api.Services;
+using Tennis.Api.Statistics;
 
 namespace Tennis.Api.Controllers;
 
@@ -9,10 +10,12 @@ namespace Tennis.Api.Controllers;
 public class PlayersController : ControllerBase
 {
     private readonly PlayerService _players;
+    private readonly PlayerStatisticsService _statistics;
 
-    public PlayersController(PlayerService players)
+    public PlayersController(PlayerService players, PlayerStatisticsService statistics)
     {
         _players = players;
+        _statistics = statistics;
     }
 
     [HttpGet]
@@ -46,6 +49,28 @@ public class PlayersController : ControllerBase
 
         var history = await _players.GetMatchHistoryAsync(id, page, pageSize, cancellationToken);
         return history is null ? NotFound("Player was not found.") : Ok(history);
+    }
+
+    [HttpGet("{id:guid}/statistics")]
+    public async Task<IActionResult> GetStatistics(
+        Guid id,
+        [FromQuery] DateOnly? asOfDate,
+        [FromQuery] string[]? surface,
+        [FromQuery] string? level,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? rankingGroup,
+        [FromQuery] int? recent,
+        [FromQuery] Guid? excludeMatchId,
+        CancellationToken cancellationToken)
+    {
+        if (!PlayerStatisticsRequest.TryCreate(asOfDate, surface, level, from, to, rankingGroup, recent, excludeMatchId, out var request, out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var report = await _statistics.GetAsync(id, request!, cancellationToken);
+        return report is null ? NotFound("Player was not found.") : Ok(report);
     }
 
     [HttpGet("{id:guid}")]

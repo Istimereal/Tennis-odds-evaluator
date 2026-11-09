@@ -29,6 +29,7 @@ builder.Services.AddHttpClient<TennisDataDownloadClient>(client =>
 builder.Services.AddScoped<TennisSeasonFileSource>();
 builder.Services.AddScoped<TennisDataImportService>();
 builder.Services.AddScoped<PlayerService>();
+builder.Services.AddScoped<PlayerStatisticsService>();
 builder.Services.AddScoped<MatchService>();
 builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<ImportHistoryService>();

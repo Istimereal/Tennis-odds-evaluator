@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { playerMatchesQuery, playerQuery } from "../api";
+import { PlayerStatisticsSection } from "./PlayerStatisticsSection";
 import { Pager, QueryState, dash } from "../components/QueryState";
 
 export function PlayerDetailPage() {
@@ -46,6 +47,7 @@ export function PlayerDetailPage() {
               Matches<strong>{query.data.matchCount}</strong>
             </article>
           </section>
+          <PlayerStatisticsSection playerId={query.data.id} />
           <section className="panel">
             <h2>Surface records</h2>
             {query.data.surfaceRecords.length === 0 ? (
