@@ -18,9 +18,10 @@ public class SeasonHeaderPlanTests
     [Fact]
     public void Unpublished_fields_name_the_bindings_that_have_no_column()
     {
-        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "Player.Name");
-        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "Match.Score");
-        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "MatchPlayer.Odds");
+        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "TournamentEdition.StartDate");
+        Assert.Contains(TennisDataBinding.Unpublished, field => field.Field == "TournamentEdition.Participants");
+        Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "Player.Name");
+        Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "MatchPlayer.Odds");
         Assert.DoesNotContain(TennisDataBinding.Unpublished, field => field.Field == "Match.WinnerCode");
     }
 

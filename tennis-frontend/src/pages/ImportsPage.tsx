@@ -69,7 +69,7 @@ export function ImportsPage() {
           </p>
         ) : null}
         <p className="muted">
-          Re-import is safe: an unchanged file is skipped by its SHA-256. Updated is not counted, because a stable match id column has not been seen, so a changed row cannot be matched in place.
+          Re-import reads the file again when the SHA-256 is unchanged. Existing matches are updated by match_id, including rows first stored under a sha256 source key.
         </p>
       </section>
       <section className="panel">

@@ -6,23 +6,55 @@ public sealed record UnmappedField(string Field, string Reason);
 
 public sealed class SeasonHeaderPlan
 {
+    private static readonly HashSet<string> MappedMatchColumns = new(StringComparer.Ordinal)
+    {
+        TennisDataRowMapper.WinnerCodeColumn,
+        "match_id",
+        "season_year",
+        "tour_type_human",
+        "date_timestamp",
+        "date_human",
+        "tournament",
+        "round",
+        "surface"
+    };
+
+    private static readonly HashSet<string> SideIdentityColumns = new(StringComparer.Ordinal)
+    {
+        "home_name",
+        "away_name",
+        "home_id",
+        "away_id",
+        "home_rank",
+        "away_rank"
+    };
+
     public required int WinnerCodeIndex { get; init; }
     public required IReadOnlyList<int> HomeIndexes { get; init; }
     public required IReadOnlyList<int> AwayIndexes { get; init; }
     public required IReadOnlyList<string> UnmappedColumns { get; init; }
+    public required IReadOnlyDictionary<string, int> Indexes { get; init; }
+
+    public int IndexOf(string name) => Indexes.TryGetValue(name, out var index) ? index : -1;
 
     public static SeasonHeaderPlan Classify(string[] header)
     {
         var home = new List<int>();
         var away = new List<int>();
         var unmapped = new List<string>();
+        var indexes = new Dictionary<string, int>(StringComparer.Ordinal);
         var winner = -1;
         for (var index = 0; index < header.Length; index++)
         {
             var name = header[index];
+            indexes[name] = index;
             if (name == TennisDataRowMapper.WinnerCodeColumn)
             {
                 winner = index;
+            }
+            else if (SideIdentityColumns.Contains(name) || IsOddsColumn(name))
+            {
+                continue;
             }
             else if (name.StartsWith("home_", StringComparison.Ordinal))
             {
@@ -32,7 +64,7 @@ public sealed class SeasonHeaderPlan
             {
                 away.Add(index);
             }
-            else
+            else if (!MappedMatchColumns.Contains(name))
             {
                 unmapped.Add(name);
             }
@@ -43,9 +75,13 @@ public sealed class SeasonHeaderPlan
             WinnerCodeIndex = winner,
             HomeIndexes = home,
             AwayIndexes = away,
-            UnmappedColumns = unmapped
+            UnmappedColumns = unmapped,
+            Indexes = indexes
         };
     }
+
+    public static bool IsOddsColumn(string name) =>
+        name.StartsWith("home_odds_", StringComparison.Ordinal) || name.StartsWith("away_odds_", StringComparison.Ordinal);
 }
 
 public static class TennisDataBinding
@@ -54,20 +90,8 @@ public static class TennisDataBinding
 
     public static readonly IReadOnlyList<UnmappedField> Unpublished =
     [
-        new("Player.SourceId", "Each player has a stable id, but the season CSV column name is not published and no season file is available to read."),
-        new("Player.Name", "The season CSV column name for the player name is not published."),
-        new("Tournament.SourceId", "The season CSV column name for the tournament id is not published."),
-        new("Tournament.Name", "The season CSV column name for the tournament name is not published."),
-        new("TournamentEdition.Name", "The season CSV column name for the tournament edition name is not published."),
-        new("TournamentEdition.Surface", "The season CSV column name for surface is not published."),
-        new("TournamentEdition.Level", "Main Tour and Challenger are described as coverage, not as a published column name."),
-        new("TournamentEdition.StartDate", "The season CSV column name for the tournament date is not published."),
-        new("Match.PlayedOn", "The season CSV column name for the match date is not published. The filename year is not used as the match date."),
-        new("Match.Score", "The season CSV column name for the score is not published."),
-        new("Match.Round", "The season CSV column name for the round is not published."),
-        new("TournamentEdition.Participants", "The season CSV column name for the draw or participant count is not published."),
-        new("MatchPlayer.Ranking", "rank is documented on the player-performance CSV, not as a season-match column name."),
-        new("MatchPlayer.Odds", "Match-winner odds and first-set odds are documented as present, but their column names are not published.")
+        new("TournamentEdition.StartDate", "date_timestamp is the match date. The season file has no tournament start date."),
+        new("TournamentEdition.Participants", "The season file has no draw or participant count.")
     ];
 
     public static string SerializeColumns(IReadOnlyList<string> columns) => JsonSerializer.Serialize(columns);

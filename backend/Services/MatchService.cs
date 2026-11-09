@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tennis.Api.Data;
 using Tennis.Api.Data.Entities;
+using Tennis.Api.Import;
 using Tennis.Api.Models;
 
 namespace Tennis.Api.Services;
@@ -137,8 +138,8 @@ public class MatchService
                     row.Odds))
                 .ToArray(),
             includeRaw ? match.RawRecord : null,
-            null,
-            null,
+            TennisDataRowMapper.ReadRound(match.RawRecord),
+            TennisDataRowMapper.ReadScore(match.RawRecord),
             StatCompleteness(match));
     }
 

@@ -53,6 +53,9 @@ public class TennisDataImportService
         var filesProcessed = 0;
         var rowsRead = 0;
         var matchesInserted = 0;
+        var matchesUpdated = 0;
+        var playersInserted = 0;
+        var tournamentsInserted = 0;
         var duplicatesSkipped = 0;
         var invalidRowsSkipped = 0;
         var missingStatisticCells = 0;
@@ -69,12 +72,18 @@ public class TennisDataImportService
                 var count = yearCounts[seasonFile.Year];
                 count.RowsRead += outcome.RowsRead;
                 count.MatchesInserted += outcome.MatchesInserted;
+                count.MatchesUpdated += outcome.MatchesUpdated;
+                count.PlayersInserted += outcome.PlayersInserted;
+                count.TournamentsInserted += outcome.TournamentsInserted;
                 count.DuplicatesSkipped += outcome.DuplicatesSkipped;
                 count.InvalidRowsSkipped += outcome.InvalidRowsSkipped;
                 count.MissingStatisticCells += outcome.MissingStatisticCells;
                 filesProcessed++;
                 rowsRead += outcome.RowsRead;
                 matchesInserted += outcome.MatchesInserted;
+                matchesUpdated += outcome.MatchesUpdated;
+                playersInserted += outcome.PlayersInserted;
+                tournamentsInserted += outcome.TournamentsInserted;
                 duplicatesSkipped += outcome.DuplicatesSkipped;
                 invalidRowsSkipped += outcome.InvalidRowsSkipped;
                 missingStatisticCells += outcome.MissingStatisticCells;
@@ -88,6 +97,7 @@ public class TennisDataImportService
             storedBatch.FilesProcessed = filesProcessed;
             storedBatch.RowsRead = rowsRead;
             storedBatch.MatchesInserted = matchesInserted;
+            storedBatch.PlayersInserted = playersInserted;
             storedBatch.DuplicatesSkipped = duplicatesSkipped;
             storedBatch.InvalidRowsSkipped = invalidRowsSkipped;
             storedBatch.MissingStatisticCells = missingStatisticCells;
@@ -104,13 +114,13 @@ public class TennisDataImportService
 
         var levels = await LevelCountsAsync(cancellationToken);
         var unmappedColumnList = unmappedColumns.OrderBy(column => column, StringComparer.Ordinal).ToArray();
-        var message = BuildMessage(downloadResult.Message, seasonFiles.Count, unmappedColumnList);
+        var message = BuildMessage(downloadResult.Message, seasonFiles.Count, matchesUpdated, playersInserted, tournamentsInserted, unmappedColumnList);
         return ImportOutcome.Ok(new ImportSummaryResponse(
             downloadResult.Automated,
             filesProcessed,
             rowsRead,
             matchesInserted,
-            0,
+            playersInserted,
             duplicatesSkipped,
             invalidRowsSkipped,
             missingStatisticCells,
@@ -125,33 +135,6 @@ public class TennisDataImportService
     {
         var hash = await HashAsync(seasonFile.Path, cancellationToken);
         var byteSize = new FileInfo(seasonFile.Path).Length;
-        var previous = await _db.ImportFiles
-            .AsNoTracking()
-            .Where(file => file.Sha256 == hash && file.Status == "imported")
-            .OrderByDescending(file => file.ImportedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (previous is not null)
-        {
-            _db.ImportFiles.Add(new ImportFileRecord
-            {
-                Id = Guid.NewGuid(),
-                ImportBatchId = batchId,
-                SourceYear = seasonFile.Year,
-                OriginalFileName = seasonFile.FileName,
-                Sha256 = hash,
-                ByteSize = byteSize,
-                Provenance = TennisSeasons.Provenance,
-                HeaderJson = previous.HeaderJson,
-                UnmappedColumns = previous.UnmappedColumns,
-                Status = "skipped-unchanged",
-                RowsRead = previous.RowsRead,
-                DuplicatesSkipped = previous.MatchesInserted,
-                ImportedAt = DateTimeOffset.UtcNow
-            });
-            await _db.SaveChangesAsync(cancellationToken);
-            return new FileOutcome(0, 0, previous.MatchesInserted, 0, 0, TennisDataBinding.ReadColumns(previous.UnmappedColumns));
-        }
 
         List<string[]> table;
         try
@@ -161,13 +144,13 @@ public class TennisDataImportService
         catch (InvalidDataException exception)
         {
             await RejectAsync(batchId, seasonFile, hash, byteSize, "[]", "[]", exception.Message, cancellationToken);
-            return new FileOutcome(0, 0, 0, 1, 0, []);
+            return RejectedFile([]);
         }
 
         if (table.Count == 0)
         {
             await RejectAsync(batchId, seasonFile, hash, byteSize, "[]", "[]", "The CSV has no header row.", cancellationToken);
-            return new FileOutcome(0, 0, 0, 1, 0, []);
+            return RejectedFile([]);
         }
 
         var header = table[0];
@@ -175,7 +158,7 @@ public class TennisDataImportService
         if (header.Distinct(StringComparer.Ordinal).Count() != header.Length || header.Any(name => name.Length == 0))
         {
             await RejectAsync(batchId, seasonFile, hash, byteSize, headerJson, "[]", "The header has a blank or duplicate column name.", cancellationToken);
-            return new FileOutcome(0, 0, 0, 1, 0, []);
+            return RejectedFile([]);
         }
 
         var plan = SeasonHeaderPlan.Classify(header);
@@ -191,7 +174,7 @@ public class TennisDataImportService
                 unmappedJson,
                 "The header has no winner_code column, so this is not a TennisData.app season file. Unmapped columns are stored and were not dropped.",
                 cancellationToken);
-            return new FileOutcome(0, 0, 0, 1, 0, plan.UnmappedColumns);
+            return RejectedFile(plan.UnmappedColumns);
         }
 
         var fileRecord = new ImportFileRecord
@@ -211,13 +194,36 @@ public class TennisDataImportService
         _db.ImportFiles.Add(fileRecord);
         await _db.SaveChangesAsync(cancellationToken);
 
-        var existingKeys = await _db.Matches
+        var players = await _db.Players
+            .Where(player => player.SourceId != null)
+            .ToDictionaryAsync(player => player.SourceId!, StringComparer.Ordinal, cancellationToken);
+        var tournaments = await _db.Tournaments
+            .Where(tournament => tournament.SourceId != null)
+            .ToDictionaryAsync(tournament => tournament.SourceId!, StringComparer.Ordinal, cancellationToken);
+        var editions = (await _db.TournamentEditions.ToListAsync(cancellationToken))
+            .ToDictionary(edition => (edition.TournamentId, edition.Year));
+        var existingMatches = await _db.Matches
+            .Include(match => match.Players)
             .Where(match => match.SourceYear == seasonFile.Year)
-            .Select(match => match.SourceKey)
             .ToListAsync(cancellationToken);
-        var knownKeys = existingKeys.ToHashSet(StringComparer.Ordinal);
+        var byKey = new Dictionary<string, Match>(StringComparer.Ordinal);
+        var byMatchId = new Dictionary<string, Match>(StringComparer.Ordinal);
+        foreach (var existing in existingMatches)
+        {
+            byKey[existing.SourceKey] = existing;
+            var storedMatchId = ReadMatchId(existing.RawRecord);
+            if (storedMatchId is not null)
+            {
+                byMatchId.TryAdd(storedMatchId, existing);
+            }
+        }
+
+        var touched = new HashSet<Guid>();
         var rowsRead = 0;
         var inserted = 0;
+        var updated = 0;
+        var playersInserted = 0;
+        var tournamentsInserted = 0;
         var duplicates = 0;
         var invalid = 0;
         var missing = 0;
@@ -240,40 +246,49 @@ public class TennisDataImportService
                 continue;
             }
 
-            if (!knownKeys.Add(mapped.SourceKey))
+            var match = FindExisting(mapped, byMatchId, byKey);
+            if (match is not null && !touched.Add(match.Id))
             {
                 duplicates++;
                 continue;
             }
 
-            var match = new Match
+            var home = ResolvePlayer(mapped.Home, players, ref playersInserted);
+            var away = ResolvePlayer(mapped.Away, players, ref playersInserted);
+            var edition = ResolveEdition(mapped, seasonFile.Year, tournaments, editions, ref tournamentsInserted);
+            if (match is null)
             {
-                Id = Guid.NewGuid(),
-                SourceKey = mapped.SourceKey,
-                SourceYear = seasonFile.Year,
-                SeasonFileName = seasonFile.FileName,
-                WinnerCode = mapped.WinnerCode,
-                RawRecord = mapped.RawJson,
-                ImportFileId = fileRecord.Id
-            };
-            match.Players.Add(new MatchPlayer
+                match = new Match
+                {
+                    Id = Guid.NewGuid(),
+                    SourceYear = seasonFile.Year,
+                    ImportFileId = fileRecord.Id
+                };
+                _db.Matches.Add(match);
+                touched.Add(match.Id);
+                inserted++;
+            }
+            else
             {
-                Id = Guid.NewGuid(),
-                Side = "home",
-                IsWinner = mapped.WinnerCode == 1,
-                Statistics = mapped.HomeStatistics,
-                Odds = TennisDataBinding.OddsJson
-            });
-            match.Players.Add(new MatchPlayer
+                updated++;
+            }
+
+            match.SourceKey = mapped.SourceKey;
+            match.SourceYear = seasonFile.Year;
+            match.SeasonFileName = seasonFile.FileName;
+            match.WinnerCode = mapped.WinnerCode;
+            match.PlayedOn = mapped.PlayedOn;
+            match.RawRecord = mapped.RawJson;
+            match.ImportFileId = fileRecord.Id;
+            match.TournamentEdition = edition;
+            byKey[mapped.SourceKey] = match;
+            if (mapped.MatchId is not null)
             {
-                Id = Guid.NewGuid(),
-                Side = "away",
-                IsWinner = mapped.WinnerCode == 2,
-                Statistics = mapped.AwayStatistics,
-                Odds = TennisDataBinding.OddsJson
-            });
-            _db.Matches.Add(match);
-            inserted++;
+                byMatchId[mapped.MatchId] = match;
+            }
+
+            ApplySide(match, "home", mapped.Home, mapped.WinnerCode == 1, home);
+            ApplySide(match, "away", mapped.Away, mapped.WinnerCode == 2, away);
             pending++;
             if (pending < BatchSize)
             {
@@ -281,14 +296,12 @@ public class TennisDataImportService
             }
 
             await _db.SaveChangesAsync(cancellationToken);
-            _db.ChangeTracker.Clear();
             pending = 0;
         }
 
         if (pending > 0)
         {
             await _db.SaveChangesAsync(cancellationToken);
-            _db.ChangeTracker.Clear();
         }
 
         var stored = await _db.ImportFiles.FirstAsync(file => file.Id == fileRecord.Id, cancellationToken);
@@ -298,8 +311,167 @@ public class TennisDataImportService
         stored.InvalidRowsSkipped = invalid;
         stored.MissingStatisticCells = missing;
         await _db.SaveChangesAsync(cancellationToken);
-        return new FileOutcome(rowsRead, inserted, duplicates, invalid, missing, plan.UnmappedColumns);
+        _db.ChangeTracker.Clear();
+        return new FileOutcome(rowsRead, inserted, updated, playersInserted, tournamentsInserted, duplicates, invalid, missing, plan.UnmappedColumns);
     }
+
+    private static Match? FindExisting(MappedSeasonRow mapped, Dictionary<string, Match> byMatchId, Dictionary<string, Match> byKey)
+    {
+        if (mapped.MatchId is not null && byMatchId.TryGetValue(mapped.MatchId, out var byId))
+        {
+            return byId;
+        }
+
+        if (byKey.TryGetValue(mapped.LegacySourceKey, out var byLegacy))
+        {
+            return byLegacy;
+        }
+
+        if (byKey.TryGetValue(mapped.SourceKey, out var bySource))
+        {
+            return bySource;
+        }
+
+        return null;
+    }
+
+    private Player? ResolvePlayer(MappedPlayerSide side, Dictionary<string, Player> players, ref int created)
+    {
+        if (side.SourceId is null && side.Name is null)
+        {
+            return null;
+        }
+
+        var sourceId = side.SourceId ?? "name:" + side.Name!.ToLowerInvariant();
+        if (players.TryGetValue(sourceId, out var player))
+        {
+            if (player.Name.Length == 0 && side.Name is not null)
+            {
+                player.Name = side.Name;
+            }
+
+            return player;
+        }
+
+        player = new Player
+        {
+            Id = Guid.NewGuid(),
+            SourceId = sourceId,
+            Name = side.Name ?? sourceId
+        };
+        _db.Players.Add(player);
+        players[sourceId] = player;
+        created++;
+        return player;
+    }
+
+    private TournamentEdition? ResolveEdition(
+        MappedSeasonRow mapped,
+        int fileYear,
+        Dictionary<string, Tournament> tournaments,
+        Dictionary<(Guid TournamentId, int Year), TournamentEdition> editions,
+        ref int tournamentsInserted)
+    {
+        if (mapped.TournamentName is null)
+        {
+            return null;
+        }
+
+        if (!tournaments.TryGetValue(mapped.TournamentName, out var tournament))
+        {
+            tournament = new Tournament
+            {
+                Id = Guid.NewGuid(),
+                SourceId = mapped.TournamentName,
+                Name = mapped.TournamentName
+            };
+            _db.Tournaments.Add(tournament);
+            tournaments[mapped.TournamentName] = tournament;
+            tournamentsInserted++;
+        }
+
+        var year = mapped.SeasonYear ?? fileYear;
+        if (!editions.TryGetValue((tournament.Id, year), out var edition))
+        {
+            edition = new TournamentEdition
+            {
+                Id = Guid.NewGuid(),
+                Tournament = tournament,
+                Year = year,
+                Name = mapped.TournamentName,
+                Surface = mapped.Surface,
+                Level = mapped.TourLevel
+            };
+            _db.TournamentEditions.Add(edition);
+            editions[(tournament.Id, year)] = edition;
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(edition.Name))
+            {
+                edition.Name = mapped.TournamentName;
+            }
+
+            if (string.IsNullOrWhiteSpace(edition.Surface))
+            {
+                edition.Surface = mapped.Surface;
+            }
+
+            if (string.IsNullOrWhiteSpace(edition.Level))
+            {
+                edition.Level = mapped.TourLevel;
+            }
+        }
+
+        return edition;
+    }
+
+    private static void ApplySide(Match match, string sideName, MappedPlayerSide side, bool isWinner, Player? player)
+    {
+        var row = match.Players.FirstOrDefault(item => item.Side == sideName);
+        if (row is null)
+        {
+            row = new MatchPlayer
+            {
+                Id = Guid.NewGuid(),
+                Side = sideName
+            };
+            match.Players.Add(row);
+        }
+
+        row.Player = player;
+        if (player is null)
+        {
+            row.PlayerId = null;
+        }
+
+        row.IsWinner = isWinner;
+        row.Ranking = side.Ranking;
+        row.Statistics = side.StatisticsJson;
+        row.Odds = side.OddsJson;
+    }
+
+    private static string? ReadMatchId(string rawJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(rawJson);
+            if (document.RootElement.TryGetProperty("match_id", out var value) && value.ValueKind == JsonValueKind.String)
+            {
+                var text = value.GetString();
+                return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static FileOutcome RejectedFile(IReadOnlyList<string> unmappedColumns) =>
+        new(0, 0, 0, 0, 0, 0, 1, 0, unmappedColumns);
 
     private async Task RejectAsync(
         Guid batchId,
@@ -347,20 +519,26 @@ public class TennisDataImportService
         return mapped;
     }
 
-    private static string BuildMessage(string downloadMessage, int fileCount, IReadOnlyList<string> unmappedColumns)
+    private static string BuildMessage(
+        string downloadMessage,
+        int fileCount,
+        int matchesUpdated,
+        int playersInserted,
+        int tournamentsInserted,
+        IReadOnlyList<string> unmappedColumns)
     {
         var files = fileCount == 0
             ? " No yyyy-atp-season.csv files for 2021-2026 were in Data/source."
-            : " Unchanged files are skipped by SHA-256.";
+            : $" Existing matches updated: {matchesUpdated}. Players created: {playersInserted}. Tournaments created: {tournamentsInserted}. The file is read again when its SHA-256 matches a previous import. Each match is updated by match_id, including a row whose stored source key is still the earlier sha256 digest.";
         var seen = unmappedColumns.Count == 0
             ? " No extra CSV columns were seen."
-            : " CSV columns that did not map, kept in RawRecord: " + string.Join(", ", unmappedColumns) + ".";
+            : " CSV columns kept only in RawRecord: " + string.Join(", ", unmappedColumns) + ".";
         var unpublished = string.Join(" ", TennisDataBinding.Unpublished.Select(field => field.Field + " (" + field.Reason + ")"));
         return downloadMessage
             + files
-            + " Mapped: winner_code to Match.WinnerCode (1 = home, 2 = away); each home_ column to the home MatchPlayer statistics; each away_ column to the away MatchPlayer statistics; every column to Match.RawRecord."
+            + " Mapped: match_id to Match.SourceKey; home_id and away_id to Player.SourceId; home_name and away_name to Player.Name; both sides to MatchPlayer; tournament to Tournament.Name; surface to TournamentEdition.Surface; tour_type_human to TournamentEdition.Level; date_timestamp to Match.PlayedOn; round from RawRecord; home_rank and away_rank to MatchPlayer.Ranking; odds columns to MatchPlayer.Odds; remaining home_ and away_ columns to MatchPlayer statistics; every column to Match.RawRecord."
             + seen
-            + " Not guessed: "
+            + " Not stored on their own columns: "
             + unpublished;
     }
 
@@ -375,6 +553,9 @@ public class TennisDataImportService
     {
         public int RowsRead { get; set; }
         public int MatchesInserted { get; set; }
+        public int MatchesUpdated { get; set; }
+        public int PlayersInserted { get; set; }
+        public int TournamentsInserted { get; set; }
         public int DuplicatesSkipped { get; set; }
         public int InvalidRowsSkipped { get; set; }
         public int MissingStatisticCells { get; set; }
@@ -383,7 +564,7 @@ public class TennisDataImportService
             year,
             RowsRead,
             MatchesInserted,
-            0,
+            PlayersInserted,
             DuplicatesSkipped,
             InvalidRowsSkipped,
             MissingStatisticCells);
@@ -392,6 +573,9 @@ public class TennisDataImportService
     private sealed record FileOutcome(
         int RowsRead,
         int MatchesInserted,
+        int MatchesUpdated,
+        int PlayersInserted,
+        int TournamentsInserted,
         int DuplicatesSkipped,
         int InvalidRowsSkipped,
         int MissingStatisticCells,
