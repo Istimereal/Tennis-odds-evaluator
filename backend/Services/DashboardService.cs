@@ -107,7 +107,7 @@ public class DashboardService
         var query = _db.ImportBatches.AsNoTracking();
         if (successful == true)
         {
-            query = query.Where(batch => batch.Error == null && batch.MatchesInserted > 0);
+            query = query.Where(batch => batch.Error == null && (batch.MatchesInserted > 0 || batch.PlayersInserted > 0));
         }
 
         return await query
