@@ -156,6 +156,19 @@ select {
   margin-top: 12px;
 }
 
+.search-results {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.search-results li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

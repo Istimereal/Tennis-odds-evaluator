@@ -5,6 +5,7 @@ import { ImportsPage } from "./pages/ImportsPage";
 import { MatchDetailPage } from "./pages/MatchDetailPage";
 import { MatchesPage } from "./pages/MatchesPage";
 import { PlayerDetailPage } from "./pages/PlayerDetailPage";
+import { PlayerComparisonPage } from "./pages/PlayerComparisonPage";
 import { PlayersPage } from "./pages/PlayersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TournamentDetailPage } from "./pages/TournamentDetailPage";
@@ -16,6 +17,7 @@ export function App() {
       <Route element={<Shell />}>
         <Route index element={<DashboardPage />} />
         <Route path="players" element={<PlayersPage />} />
+        <Route path="compare" element={<PlayerComparisonPage />} />
         <Route path="players/:id" element={<PlayerDetailPage />} />
         <Route path="matches" element={<MatchesPage />} />
         <Route path="matches/:id" element={<MatchDetailPage />} />
