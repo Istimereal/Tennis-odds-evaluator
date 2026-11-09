@@ -32,6 +32,21 @@ export type RecentMatch = {
   surface: string | null;
   level: string | null;
   score: string | null;
+  opponentId: string | null;
+  opponentName: string | null;
+  round: string | null;
+};
+
+export type PlayerMatchHistory = {
+  id: string;
+  playedOn: string | null;
+  opponentId: string | null;
+  opponentName: string | null;
+  tournamentName: string | null;
+  round: string | null;
+  surface: string | null;
+  score: string | null;
+  isWinner: boolean | null;
 };
 
 export type PlayerDetail = Player & {

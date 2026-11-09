@@ -1,4 +1,4 @@
-import type { Coverage, Dashboard, ImportBatch, ImportSummary, MatchRow, Page, Player, PlayerComparison, PlayerDetail, TournamentDetail, TournamentRow } from "./types";
+import type { Coverage, Dashboard, ImportBatch, ImportSummary, MatchRow, Page, Player, PlayerComparison, PlayerDetail, PlayerMatchHistory, TournamentDetail, TournamentRow } from "./types";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5080").replace(/\/$/, "");
 
@@ -33,6 +33,11 @@ export function playersQuery(page: number, name: string) {
 
 export function playerQuery(id: string) {
   return apiGet<PlayerDetail>(`/api/players/${id}`);
+}
+
+export function playerMatchesQuery(id: string, page: number) {
+  const params = new URLSearchParams({ page: String(page), pageSize: "10" });
+  return apiGet<Page<PlayerMatchHistory>>(`/api/players/${id}/matches?${params}`);
 }
 
 export function playerComparisonQuery(playerAId: string, playerBId: string) {

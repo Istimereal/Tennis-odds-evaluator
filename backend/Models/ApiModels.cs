@@ -120,7 +120,21 @@ public record RecentMatchResponse(
     string? TournamentName,
     string? Surface,
     string? Level,
-    string? Score);
+    string? Score,
+    Guid? OpponentId,
+    string? OpponentName,
+    string? Round);
+
+public record PlayerMatchHistoryItem(
+    Guid Id,
+    DateOnly? PlayedOn,
+    Guid? OpponentId,
+    string? OpponentName,
+    string? TournamentName,
+    string? Round,
+    string? Surface,
+    string? Score,
+    bool? IsWinner);
 
 public record PlayerDetailResponse(
     Guid Id,

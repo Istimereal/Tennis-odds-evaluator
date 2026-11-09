@@ -31,6 +31,23 @@ public class PlayersController : ControllerBase
         return Ok(await _players.GetPageAsync(page, pageSize, name, cancellationToken));
     }
 
+    [HttpGet("{id:guid}/matches")]
+    public async Task<IActionResult> GetMatches(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlayerService.DefaultHistoryPageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var error = PageQuery.Validate(page, pageSize);
+        if (error is not null)
+        {
+            return BadRequest(error);
+        }
+
+        var history = await _players.GetMatchHistoryAsync(id, page, pageSize, cancellationToken);
+        return history is null ? NotFound("Player was not found.") : Ok(history);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
