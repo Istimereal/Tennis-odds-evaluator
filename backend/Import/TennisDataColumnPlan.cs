@@ -58,11 +58,17 @@ public sealed class SeasonHeaderPlan
             }
             else if (name.StartsWith("home_", StringComparison.Ordinal))
             {
-                home.Add(index);
+                if (TennisStatisticColumns.IsPlayerStatistic(name))
+                {
+                    home.Add(index);
+                }
             }
             else if (name.StartsWith("away_", StringComparison.Ordinal))
             {
-                away.Add(index);
+                if (TennisStatisticColumns.IsPlayerStatistic(name))
+                {
+                    away.Add(index);
+                }
             }
             else if (!MappedMatchColumns.Contains(name))
             {
@@ -91,7 +97,12 @@ public static class TennisDataBinding
     public static readonly IReadOnlyList<UnmappedField> Unpublished =
     [
         new("TournamentEdition.StartDate", "date_timestamp is the match date. The season file has no tournament start date."),
-        new("TournamentEdition.Participants", "The season file has no draw or participant count.")
+        new("TournamentEdition.Participants", "The season file has no draw or participant count."),
+        new("MatchPlayer.RankingPoints", "home_points and away_points are tour ranking points beside home_rank and away_rank. They stay in RawRecord."),
+        new("MatchGame", "The season file has no game sequence. MatchGame is a design shape with no table."),
+        new("MatchPoint", "The season file has no point sequence. MatchPoint is a design shape with no table."),
+        new("Match.Conditions", "Duration, actual start, completion, roof, venue, and interruptions are absent from the season file and are not ingested."),
+        new("MatchPlayerStatistics.FutureMetrics", "First-serve percentage, first and second serve points won, break-point counts, winners, unforced errors, net points, and total points won are reserved columns and stay null.")
     ];
 
     public static string SerializeColumns(IReadOnlyList<string> columns) => JsonSerializer.Serialize(columns);

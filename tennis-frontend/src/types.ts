@@ -54,6 +54,49 @@ export type PlayerDetail = Player & {
   recentMatches: RecentMatch[];
 };
 
+export type PlayerStatistics = {
+  aces: number | null;
+  doubleFaults: number | null;
+  servicePointsWonPercent: number | null;
+  returnPointsWonPercent: number | null;
+  breakPointsWonPercent: number | null;
+  breakPointsSavedPercent: number | null;
+  firstServePercent: number | null;
+  firstServePointsWonPercent: number | null;
+  secondServePointsWonPercent: number | null;
+  breakPointsFaced: number | null;
+  breakPointsSaved: number | null;
+  breakPointChances: number | null;
+  breakPointsConverted: number | null;
+  winners: number | null;
+  unforcedErrors: number | null;
+  netPointsWon: number | null;
+  totalPointsWon: number | null;
+};
+
+export type MatchSetScore = {
+  setNumber: number;
+  homeGames: number | null;
+  awayGames: number | null;
+  homeTiebreak: number | null;
+  awayTiebreak: number | null;
+};
+
+export type MatchConditions = {
+  durationMinutes: number | null;
+  actualStart: string | null;
+  completedAt: string | null;
+  roof: string | null;
+  venue: string | null;
+  interruptions: string | null;
+};
+
+export type PointByPoint = {
+  available: boolean;
+  state: string;
+  message: string;
+};
+
 export type MatchPlayer = {
   playerId: string | null;
   sourceId: string | null;
@@ -63,6 +106,8 @@ export type MatchPlayer = {
   ranking: number | null;
   statistics: string;
   odds: string;
+  rankingPoints: number | null;
+  playerStatistics: PlayerStatistics | null;
 };
 
 export type MatchRow = {
@@ -80,6 +125,11 @@ export type MatchRow = {
   round: string | null;
   score: string | null;
   statCompleteness: number | null;
+  status: string | null;
+  statusExtra: string | null;
+  sets: MatchSetScore[] | null;
+  conditions: MatchConditions | null;
+  pointByPoint: PointByPoint | null;
 };
 
 export type TournamentRow = {

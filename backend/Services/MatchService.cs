@@ -51,7 +51,7 @@ public class MatchService
             .Where(match => ids.Contains(match.Id))
             .ToListAsync(cancellationToken);
 
-        var ordered = ids.Select(id => matches.First(match => match.Id == id)).Select(match => ToResponse(match, includeRaw: false)).ToArray();
+        var ordered = ids.Select(id => matches.First(match => match.Id == id)).Select(match => ToResponse(match, detail: false)).ToArray();
         return new PageResponse<MatchResponse>(ordered, page, pageSize, total);
     }
 
@@ -63,8 +63,12 @@ public class MatchService
             .ThenInclude(edition => edition!.Tournament)
             .Include(item => item.Players)
             .ThenInclude(row => row.Player)
+            .Include(item => item.Players)
+            .ThenInclude(row => row.PlayerStatistics)
+            .Include(item => item.Sets)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        return match is null ? null : ToResponse(match, includeRaw: true);
+        return match is null ? null : ToResponse(match, detail: true);
     }
 
     private IQueryable<Match> Filtered(
@@ -115,7 +119,14 @@ public class MatchService
         return query;
     }
 
-    private static MatchResponse ToResponse(Match match, bool includeRaw)
+    private static readonly MatchConditionsResponse UnstoredConditions = new(null, null, null, null, null, null);
+
+    private static readonly PointByPointResponse PointByPointUnavailable = new(
+        false,
+        "Unavailable",
+        "Point by point is unavailable. The season file has no game or point sequence, so this match has no stored games or points.");
+
+    private static MatchResponse ToResponse(Match match, bool detail)
     {
         var edition = match.TournamentEdition;
         return new MatchResponse(
@@ -138,12 +149,51 @@ public class MatchService
                     row.IsWinner,
                     row.Ranking,
                     row.Statistics,
-                    row.Odds))
+                    row.Odds,
+                    detail ? TennisMatchStatistics.ReadRankingPoints(match.RawRecord, row.Side) : null,
+                    detail ? ToStatistics(row.PlayerStatistics) : null))
                 .ToArray(),
-            includeRaw ? match.RawRecord : null,
+            detail ? match.RawRecord : null,
             TennisDataRowMapper.ReadRound(match.RawRecord),
             TennisDataRowMapper.ReadScore(match.RawRecord),
-            StatCompleteness(match));
+            StatCompleteness(match),
+            detail ? TennisDataRowMapper.ReadRawText(match.RawRecord, "status") : null,
+            detail ? TennisDataRowMapper.ReadRawText(match.RawRecord, "status_extra") : null,
+            detail
+                ? match.Sets
+                    .OrderBy(set => set.SetNumber)
+                    .Select(set => new MatchSetResponse(set.SetNumber, set.HomeGames, set.AwayGames, set.HomeTiebreak, set.AwayTiebreak))
+                    .ToArray()
+                : null,
+            detail ? UnstoredConditions : null,
+            detail ? PointByPointUnavailable : null);
+    }
+
+    private static PlayerStatisticsResponse? ToStatistics(MatchPlayerStatistics? stats)
+    {
+        if (stats is null)
+        {
+            return null;
+        }
+
+        return new PlayerStatisticsResponse(
+            stats.Aces,
+            stats.DoubleFaults,
+            stats.ServicePointsWonPercent,
+            stats.ReturnPointsWonPercent,
+            stats.BreakPointsWonPercent,
+            stats.BreakPointsSavedPercent,
+            stats.FirstServePercent,
+            stats.FirstServePointsWonPercent,
+            stats.SecondServePointsWonPercent,
+            stats.BreakPointsFaced,
+            stats.BreakPointsSaved,
+            stats.BreakPointChances,
+            stats.BreakPointsConverted,
+            stats.Winners,
+            stats.UnforcedErrors,
+            stats.NetPointsWon,
+            stats.TotalPointsWon);
     }
 
     private static double? StatCompleteness(Match match)

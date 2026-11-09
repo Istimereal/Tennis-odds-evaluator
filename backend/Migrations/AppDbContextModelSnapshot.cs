@@ -231,6 +231,116 @@ namespace Tennis.Api.Migrations
                     b.ToTable("MatchPlayers");
                 });
 
+            modelBuilder.Entity("Tennis.Api.Data.Entities.MatchPlayerStatistics", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Aces")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BreakPointChances")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BreakPointsConverted")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BreakPointsFaced")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BreakPointsSaved")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("BreakPointsSavedPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<decimal?>("BreakPointsWonPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<int?>("DoubleFaults")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("FirstServePercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<decimal?>("FirstServePointsWonPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<Guid>("MatchPlayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("NetPointsWon")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("ReturnPointsWonPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<decimal?>("SecondServePointsWonPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<decimal?>("ServicePointsWonPercent")
+                        .HasPrecision(7, 3)
+                        .HasColumnType("numeric(7,3)");
+
+                    b.Property<int?>("TotalPointsWon")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("UnforcedErrors")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Winners")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchPlayerId")
+                        .IsUnique();
+
+                    b.ToTable("MatchPlayerStatistics");
+                });
+
+            modelBuilder.Entity("Tennis.Api.Data.Entities.MatchSet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AwayGames")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("AwayTiebreak")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HomeGames")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HomeTiebreak")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SetNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchId", "SetNumber")
+                        .IsUnique();
+
+                    b.ToTable("MatchSets", t =>
+                        {
+                            t.HasCheckConstraint("CK_MatchSets_SetNumber", "\"SetNumber\" BETWEEN 1 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("Tennis.Api.Data.Entities.Player", b =>
                 {
                     b.Property<Guid>("Id")
@@ -358,6 +468,28 @@ namespace Tennis.Api.Migrations
                     b.Navigation("Player");
                 });
 
+            modelBuilder.Entity("Tennis.Api.Data.Entities.MatchPlayerStatistics", b =>
+                {
+                    b.HasOne("Tennis.Api.Data.Entities.MatchPlayer", "MatchPlayer")
+                        .WithOne("PlayerStatistics")
+                        .HasForeignKey("Tennis.Api.Data.Entities.MatchPlayerStatistics", "MatchPlayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MatchPlayer");
+                });
+
+            modelBuilder.Entity("Tennis.Api.Data.Entities.MatchSet", b =>
+                {
+                    b.HasOne("Tennis.Api.Data.Entities.Match", "Match")
+                        .WithMany("Sets")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Match");
+                });
+
             modelBuilder.Entity("Tennis.Api.Data.Entities.TournamentEdition", b =>
                 {
                     b.HasOne("Tennis.Api.Data.Entities.Tournament", "Tournament")
@@ -382,6 +514,13 @@ namespace Tennis.Api.Migrations
             modelBuilder.Entity("Tennis.Api.Data.Entities.Match", b =>
                 {
                     b.Navigation("Players");
+
+                    b.Navigation("Sets");
+                });
+
+            modelBuilder.Entity("Tennis.Api.Data.Entities.MatchPlayer", b =>
+                {
+                    b.Navigation("PlayerStatistics");
                 });
 
             modelBuilder.Entity("Tennis.Api.Data.Entities.Player", b =>

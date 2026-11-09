@@ -369,6 +369,33 @@ tr:last-child td {
   font-size: 12px;
 }
 
+h3 {
+  margin: 14px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.conditions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.conditions p {
+  margin: 0;
+}
+
+.stat-percent {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-percent .bar {
+  width: 88px;
+  flex: 0 0 88px;
+}
+
 @media (max-width: 960px) {
   .shell {
     grid-template-columns: 1fr;
@@ -388,7 +415,8 @@ tr:last-child td {
 @media (max-width: 640px) {
   .cards,
   .split,
-  .bar-row {
+  .bar-row,
+  .conditions {
     grid-template-columns: 1fr;
   }
 }

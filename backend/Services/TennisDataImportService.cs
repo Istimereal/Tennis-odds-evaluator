@@ -204,6 +204,9 @@ public class TennisDataImportService
             .ToDictionary(edition => (edition.TournamentId, edition.Year));
         var existingMatches = await _db.Matches
             .Include(match => match.Players)
+            .ThenInclude(row => row.PlayerStatistics)
+            .Include(match => match.Sets)
+            .AsSplitQuery()
             .Where(match => match.SourceYear == seasonFile.Year)
             .ToListAsync(cancellationToken);
         var byKey = new Dictionary<string, Match>(StringComparer.Ordinal);
@@ -289,6 +292,22 @@ public class TennisDataImportService
 
             ApplySide(match, "home", mapped.Home, mapped.WinnerCode == 1, home);
             ApplySide(match, "away", mapped.Away, mapped.WinnerCode == 2, away);
+            var existingSetIds = match.Sets.Select(set => set.Id).ToHashSet();
+            var removedSets = new List<MatchSet>();
+            TennisMatchStatistics.ApplySets(match, mapped.Sets, removedSets);
+            foreach (var set in match.Sets)
+            {
+                if (!existingSetIds.Contains(set.Id))
+                {
+                    TrackAdded(set);
+                }
+            }
+
+            if (removedSets.Count > 0)
+            {
+                _db.RemoveRange(removedSets);
+            }
+
             pending++;
             if (pending < BatchSize)
             {
@@ -426,7 +445,7 @@ public class TennisDataImportService
         return edition;
     }
 
-    private static void ApplySide(Match match, string sideName, MappedPlayerSide side, bool isWinner, Player? player)
+    private void ApplySide(Match match, string sideName, MappedPlayerSide side, bool isWinner, Player? player)
     {
         var row = match.Players.FirstOrDefault(item => item.Side == sideName);
         if (row is null)
@@ -449,6 +468,22 @@ public class TennisDataImportService
         row.Ranking = side.Ranking;
         row.Statistics = side.StatisticsJson;
         row.Odds = side.OddsJson;
+        var statisticsAreNew = row.PlayerStatistics is null;
+        TennisMatchStatistics.ApplyParsed(row, side.Parsed);
+        if (statisticsAreNew && row.PlayerStatistics is not null)
+        {
+            TrackAdded(row.PlayerStatistics);
+        }
+    }
+
+    // A new child with a client Guid is discovered as Modified on an already-saved match, so the insert never happens.
+    private void TrackAdded(object entity)
+    {
+        var entry = _db.Entry(entity);
+        if (entry.State == EntityState.Detached)
+        {
+            entry.State = EntityState.Added;
+        }
     }
 
     private static string? ReadMatchId(string rawJson)
@@ -536,7 +571,7 @@ public class TennisDataImportService
         var unpublished = string.Join(" ", TennisDataBinding.Unpublished.Select(field => field.Field + " (" + field.Reason + ")"));
         return downloadMessage
             + files
-            + " Mapped: match_id to Match.SourceKey; home_id and away_id to Player.SourceId; home_name and away_name to Player.Name; both sides to MatchPlayer; tournament to Tournament.Name; surface to TournamentEdition.Surface; tour_type_human to TournamentEdition.Level; date_timestamp to Match.PlayedOn; round from RawRecord; home_rank and away_rank to MatchPlayer.Ranking; odds columns to MatchPlayer.Odds; remaining home_ and away_ columns to MatchPlayer statistics; every column to Match.RawRecord."
+            + " Mapped: match_id to Match.SourceKey; home_id and away_id to Player.SourceId; home_name and away_name to Player.Name; both sides to MatchPlayer; tournament to Tournament.Name; surface to TournamentEdition.Surface; tour_type_human to TournamentEdition.Level; date_timestamp to Match.PlayedOn; round from RawRecord; home_rank and away_rank to MatchPlayer.Ranking; set scores to MatchSet; aces, double faults, and percentage-point statistics to MatchPlayerStatistics; odds columns to MatchPlayer.Odds; other home_ and away_ statistic cells stay as original text on MatchPlayer.Statistics; every column stays in Match.RawRecord. home_points and away_points are tour ranking points and stay in RawRecord. Reading a season again updates the same match and the same set numbers."
             + seen
             + " Not stored on their own columns: "
             + unpublished;
